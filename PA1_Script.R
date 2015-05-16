@@ -1,5 +1,7 @@
 require("ggplot2")
 require("scales")
+## Set to english language and time
+Sys.setlocale("LC_TIME", "English")
 ## Get the URL
 fileURL <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
 zipdatafile <- "./datafile.zip" ## create zipdata file
@@ -79,3 +81,31 @@ p3 <- p3 + ylab("Frequency") +  xlab("steps") ##  Show labels
 p3 <- p3 + ggtitle("Histogram of steps taken by day with NAs replaced by interval means") ## Show the title
 p3
 dev.off()  ## Close the device (png)
+
+## Return the mean steps by day with the filled data
+newmeanstepsbyday <- mean(newsumstepsbyday$steps, na.rm = TRUE)
+print(newmeanstepsbyday)
+## Return the median steps by day with the filled data
+newmedianstepsbyday <- median(newsumstepsbyday$steps, na.rm = TRUE)
+print(newmedianstepsbyday)
+## Transform the date column in the filled data in Posix
+newactivity$date <- strptime(newactivity$date, "%Y-%m-%d")
+## Create a column with the weekdays
+newactivity$weekdays <- weekdays(newactivity$date)
+## Replace the days names by weekend or weekday
+newactivity$weekdays[newactivity$weekdays %in% c("Sunday", "Saturday")] <-"weekend"
+newactivity$weekdays[newactivity$weekdays %in% 
+                           c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")] <-"weekday"
+## Transform the weekdays column in factor
+newactivity$weekdays <- factor(newactivity$weekdays, levels = c("weekday", "weekend"), labels = c("weekday", "weekend"))
+## Create a plot with activity patterns between weekdays and weekends
+png("plot_line_weekday.png", width = 600, height = 500) ## initiate png graphic device
+p4 <- ggplot(newactivity, aes(interval, steps)) + geom_line(colour = "blue") +     
+      xlab("interval") + ylab("steps") +
+      ggtitle(expression(bold("Activity patterns between weekdays and weekends"))) +
+      facet_wrap(~ weekdays, ncol = 1)      
+p4
+dev.off()  ## Close the device (png)
+## Mean of steps by weekday
+meanstepsbyweekday <- aggregate(steps ~ weekdays, newactivity, mean)
+
