@@ -1,21 +1,14 @@
+## Load packages
 require("ggplot2")
 require("scales")
 ## Set to english language and time
 Sys.setlocale("LC_TIME", "English")
-## Get the URL
-fileURL <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
-zipdatafile <- "./datafile.zip" ## create zipdata file
-download.file(fileURL, destfile = zipdatafile, mode = "wb") ## download the file
-unzip(zipdatafile) ## unzip the file
 ## Read the data
 rawactivity <- read.csv("activity.csv")
 ## Transform the all the interval variables in 4 digits
 activity <- rawactivity
 activity$interval <- sprintf("%04d", activity$interval)
-## Transform interval in Posix
-time1 <- activity$interval
-time1 <- strptime(time1, "%H%M")
-activity$interval <- time1
+
 ## Summarize the data, sum steps by day
 sumstepsbyday <- aggregate(steps ~ date, activity, sum, na.action = na.pass)
 ## Replace NA in steps, by 0 to be showed in the histogram
@@ -23,7 +16,6 @@ sumstepsbyday$steps[is.na(sumstepsbyday$steps)] <- 0
 
 ## Make a histogram of the steps by day
 png("plot_hist.png", width = 600, height = 500) ## initiate png graphic device
-## Plot with lines separated by type color
 p <- ggplot(sumstepsbyday, aes(steps)) ## Initializes ggplot object
 p <- p + geom_histogram(col="red", fill="black", alpha = .7, binwidth = 1000)
 p <- p + ylab("Frequency") +  xlab("steps") ##  Show labels
@@ -38,11 +30,19 @@ medianstepsbyday <- median(sumstepsbyday$steps, na.rm = TRUE)
 ## Summarize the average steps by interval
 meanstepsbyinterval <- aggregate(steps ~ interval, activity, mean)
 
+## Make a a time series plot of the 5-minute interval and the average number of steps taken,
+## averaged across all days
+
+## Transform interval in Posix
+time1 <- meanstepsbyinterval$interval
+time1 <- as.POSIXct(strptime(time1, "%H%M"))
+meanstepsbyinterval$interval <- time1
+
 ## Find the max steps interval
 max_stepsinterval <- meanstepsbyinterval[which(meanstepsbyinterval$steps==max(meanstepsbyinterval$steps)),]
 print(max_stepsinterval)
-## Make a a time series plot of the 5-minute interval and the average number of steps taken,
-## averaged across all days
+
+
 png("plot_line.png", width = 600, height = 500) ## initiate png graphic device
 p2 <- ggplot(meanstepsbyinterval, aes(interval, steps)) + geom_line() +
       scale_x_datetime(labels = date_format("%H:%M"),
@@ -97,10 +97,13 @@ newactivity$weekdays[newactivity$weekdays %in% c("Sunday", "Saturday")] <-"weeke
 newactivity$weekdays[newactivity$weekdays %in% 
                            c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")] <-"weekday"
 ## Transform the weekdays column in factor
-newactivity$weekdays <- factor(newactivity$weekdays, levels = c("weekday", "weekend"), labels = c("weekday", "weekend"))
+newactivity$weekdays <- factor(newactivity$weekdays, levels = c("weekday", "weekend"),
+                               labels = c("weekday", "weekend"))
+## Average by interval and weekday
+newmeanstepbyint_week <- aggregate(steps ~ interval + weekdays, newactivity, mean)
 ## Create a plot with activity patterns between weekdays and weekends
 png("plot_line_weekday.png", width = 600, height = 500) ## initiate png graphic device
-p4 <- ggplot(newactivity, aes(interval, steps)) + geom_line(colour = "blue") +     
+p4 <- ggplot(newmeanstepbyint_week, aes(interval, steps)) + geom_line(colour = "blue") +     
       xlab("interval") + ylab("steps") +
       ggtitle(expression(bold("Activity patterns between weekdays and weekends"))) +
       facet_wrap(~ weekdays, ncol = 1)      
@@ -108,4 +111,3 @@ p4
 dev.off()  ## Close the device (png)
 ## Mean of steps by weekday
 meanstepsbyweekday <- aggregate(steps ~ weekdays, newactivity, mean)
-
